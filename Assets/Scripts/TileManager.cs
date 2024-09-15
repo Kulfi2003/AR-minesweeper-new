@@ -99,7 +99,7 @@ public class TileManager : MonoBehaviour
             isMarked = true;
             flag.SetActive(true);
             gm.flagsLeft--;
-            gm.CheckIfGameOverFlag();
+            //gm.CheckIfGameOverFlag();
         }
     }
 

@@ -6,9 +6,10 @@ using UnityEngine.EventSystems;
 using System.Collections;
 using UnityEngine.UI;
 
+
 public class RaycastScript : MonoBehaviour
 {
-    public GameObject prefabToSpawn; // Assign your prefab here in the Inspector
+    public GameObject[] prefabToSpawn; // Assign your prefab here in the Inspector
     private ARRaycastManager _raycastManager;
     private List<ARRaycastHit> _hits = new List<ARRaycastHit>();
     [SerializeField] private ARPlaneManager _planeManager;
@@ -16,9 +17,17 @@ public class RaycastScript : MonoBehaviour
     public bool positioningGame = true;
     public bool gameOver = false;
 
+    public GraphicRaycaster uiRaycaster; // Assign this in the inspector (Canvas GraphicRaycaster)
+    private PointerEventData pointerData;
+    private EventSystem eventSystem;
+
     void Start()
     {
-        _raycastManager = GetComponent<ARRaycastManager>();
+        // Initialize the EventSystem
+        eventSystem = EventSystem.current;
+
+        if (!PlayerPrefs.HasKey("difficulty")) PlayerPrefs.SetInt("difficulty", 0); // setting the difficulty in case none is specified
+        _raycastManager = GetComponent<ARRaycastManager>(); // getting raycast manager reference
     }
 
     void Update()
@@ -32,6 +41,13 @@ public class RaycastScript : MonoBehaviour
 
     void PositionGame()
     {
+        // Check if the user is interacting with the UI
+        if (IsTouchOverUI())
+        {
+            // If true, skip raycasting
+            return;
+        }
+
         if (Input.touchCount == 1)
         {
             // Single touch: Position the object
@@ -53,7 +69,8 @@ public class RaycastScript : MonoBehaviour
                     }
                     else
                     {
-                        GameObject newPrefab = Instantiate(prefabToSpawn, hitPose.position, hitPose.rotation);
+                        Debug.Log("Difficulty level should be set to : " + PlayerPrefs.GetInt("difficulty"));
+                        GameObject newPrefab = Instantiate(prefabToSpawn[PlayerPrefs.GetInt("difficulty")], hitPose.position, hitPose.rotation);
                         newPrefab.transform.localScale = Vector3.one * 0.1f;
                         newPrefab.tag = "GameManager";
                     }
@@ -106,6 +123,13 @@ public class RaycastScript : MonoBehaviour
 
     void GamePlay()
     {
+        // Check if the user is interacting with the UI
+        if (IsTouchOverUI())
+        {
+            // If true, skip raycasting
+            return;
+        }
+
         // Check for touch input
         if (Input.touchCount > 0)
         {
@@ -120,11 +144,34 @@ public class RaycastScript : MonoBehaviour
                 StartCoroutine(StartTime());
             }
 
+            if (touch.phase == TouchPhase.Moved)
+            {
+                if (_raycastManager.Raycast(touchPosition, _hits))
+                {
+                    Ray ray = Camera.main.ScreenPointToRay(touchPosition);
+                    RaycastHit raycastHit;
+
+                    if (Physics.Raycast(ray, out raycastHit))
+                    {
+                        // Check if the object hit has the tag "Tile"
+                        if (raycastHit.collider.gameObject.CompareTag("Tile"))
+                        {
+                            // Store the tile that was touched
+                            if (touchedTile != raycastHit.collider.gameObject)
+                            {
+                                //Highlight tile
+                                touchedTile.GetComponent<TileManager>().TileTouchingStartEnd(false);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Check if the touch ended (lifted finger)
             if (touch.phase == TouchPhase.Ended)
             {
-                //remove highlight from tile that was highlighted
-                if (touchedTile != null) touchedTile.GetComponent<TileManager>().TileTouchingStartEnd(false);
+                //Remove highlight from tile
+                touchedTile.GetComponent<TileManager>().TileTouchingStartEnd(false);
 
                 CheckTilePressed(touchPosition);
                 StopAllCoroutines();
@@ -145,7 +192,7 @@ public class RaycastScript : MonoBehaviour
     private void CheckTileTouched(Vector2 touchPosition)
     {
         // Perform an AR raycast to check for planes and objects
-        if (_raycastManager.Raycast(touchPosition, _hits, TrackableType.Planes))
+        if (_raycastManager.Raycast(touchPosition, _hits))
         {
             Ray ray = Camera.main.ScreenPointToRay(touchPosition);
             RaycastHit raycastHit;
@@ -208,4 +255,32 @@ public class RaycastScript : MonoBehaviour
         positioningGame = reposition;
         _planeManager.SetTrackablesActive(reposition);
     }
+
+    private bool IsTouchOverUI()
+    {
+        // Set up a new PointerEventData
+        pointerData = new PointerEventData(eventSystem);
+
+        // Use the current touch position
+        if (Input.touchCount > 0)
+        {
+            pointerData.position = Input.GetTouch(0).position;
+        }
+        else if (Input.GetMouseButton(0)) // For testing in the editor
+        {
+            pointerData.position = Input.mousePosition;
+        }
+        else
+        {
+            return false;
+        }
+
+        // Create a list to hold the results of the raycast
+        List<RaycastResult> results = new List<RaycastResult>();
+        uiRaycaster.Raycast(pointerData, results);
+
+        // Return true if any UI elements were hit
+        return results.Count > 0;
+    }
+
 }

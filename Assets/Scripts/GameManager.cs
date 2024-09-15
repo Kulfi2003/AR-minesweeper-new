@@ -1,14 +1,13 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    [SerializeField] int rows = 10;  // Number of rows in the grid
-    [SerializeField] int columns = 10;  // Number of columns in the grid
-    [SerializeField] int mineCount = 10;  // Number of mines in the grid
+    [SerializeField] int rows;  // Number of rows in the grid
+    [SerializeField] int columns;  // Number of columns in the grid
+    [SerializeField] int mineCount;  // Number of mines in the grid
     int[][] gridValues;  // 2D array to store the grid values
     bool[][] gridMines;
     GameObject[][] gridTiles;
@@ -41,7 +40,7 @@ public class GameManager : MonoBehaviour
         timePassedText.text = ConvertToMinutesAndSeconds(timePassed); // showing time
     }
 
-    public string ConvertToMinutesAndSeconds(float seconds)
+    string ConvertToMinutesAndSeconds(float seconds)
     {
         int minutes = Mathf.FloorToInt(seconds / 60);  // Get the total minutes
         int remainingSeconds = Mathf.FloorToInt(seconds % 60);  // Get the remaining seconds
@@ -236,7 +235,7 @@ public class GameManager : MonoBehaviour
     }
 
     
-
+    /*
     public void CheckIfGameOverFlag()
     {
         int i = 0; // count for the flags
@@ -258,6 +257,7 @@ public class GameManager : MonoBehaviour
             HandleGameWon();
         }
     }
+    */
 
     int count = 0;
     public void CheckIfGameOverTile(int column, int row)
